@@ -1,0 +1,61 @@
+# User data: never upload anything stored in the mask workspace.
+/masked/
+**/masked/**
+
+# Local Python runtimes and virtual environments.
+/python_embeded/
+/.venv/
+/venv/
+/env/
+**/site-packages/
+
+# Model weights and checkpoints (download/place locally; do not commit).
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+*.engine
+/weights/
+/checkpoints/
+
+# Python caches, packaging artifacts, and test caches.
+__pycache__/
+*.py[cod]
+*.pyd
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+
+# Editors, local environment/secrets, and operating-system files.
+.idea/
+.vscode/
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Streamlit and application-generated data/results.
+.streamlit/cache/
+uploads/
+outputs/
+results/
+runs/
+*.mask.png
+sam3_mask*.png
+sam3_masks.zip
+
+# Bootstrap utility is not application source.
+/get-pip.py
+
+# SAM3 upstream development material not needed to run this application.
+/sam3/examples/
+/sam3/test/
+/sam3/scripts/
+/sam3/sam3.egg-info/

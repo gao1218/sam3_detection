@@ -1,0 +1,17 @@
+# Install torch and torchvision separately for the desired CPU/CUDA runtime.
+# See README.md for the verified CUDA 13.0 installation command.
+setuptools<81
+streamlit>=1.36
+streamlit-drawable-canvas==0.9.3
+Pillow>=10.0
+numpy>=1.26,<2
+timm>=1.0.17
+ftfy==6.1.1
+iopath>=0.1.10
+einops
+pycocotools
+psutil
+tqdm
+regex
+typing_extensions
+huggingface_hub
