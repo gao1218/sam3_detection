@@ -228,22 +228,31 @@ def main() -> None:
             st.download_button("保存目标编号 mask（PNG）", data=label_buffer.getvalue(),
                                file_name="sam3_mask_labels.png", mime="image/png")
 
-        st.caption("本地保存会将叠加结果和当前 mask 输出方式对应的 mask 图写入项目目录下的 masked 文件夹。")
-        if st.button("保存叠加图和 mask 到 masked 文件夹", type="primary"):
-            try:
-                original_stem = Path(uploaded.name).stem
-                safe_stem = re.sub(r"[^A-Za-z0-9._-]+", "_", original_stem).strip("._") or "image"
-                output_dir = PROJECT_ROOT / "masked"
-                output_dir.mkdir(parents=True, exist_ok=True)
-                overlay_path = output_dir / f"{safe_stem}_masked.png"
-                overlay_image.save(overlay_path, format="PNG")
-                saved_masks = []
-                for index, mask_image in enumerate(mask_images, start=1):
-                    suffix = "_mask.png" if len(mask_images) == 1 else f"_mask_{index:02d}.png"
-                    mask_path = output_dir / f"{safe_stem}{suffix}"
-                    mask_image.save(mask_path, format="PNG")
-                    saved_masks.append(mask_path.name)
-                st.success(f"已保存到 {output_dir.resolve()}：{overlay_path.name}，" + "、".join(saved_masks))
-            except Exception as exc:
-                st.error(f"保存失败：{exc}")
+        st.caption("两个按钮可分别保存到项目目录下的 masked 文件夹。")
+        save_overlay_col, save_mask_col = st.columns(2)
+        original_stem = Path(uploaded.name).stem
+        safe_stem = re.sub(r"[^A-Za-z0-9._-]+", "_", original_stem).strip("._") or "image"
+        output_dir = PROJECT_ROOT / "masked"
+        with save_overlay_col:
+            if st.button("仅保存叠加图", type="primary"):
+                try:
+                    output_dir.mkdir(parents=True, exist_ok=True)
+                    overlay_path = output_dir / f"{safe_stem}_masked.png"
+                    overlay_image.save(overlay_path, format="PNG")
+                    st.success(f"叠加图已保存：{overlay_path.resolve()}")
+                except Exception as exc:
+                    st.error(f"叠加图保存失败：{exc}")
+        with save_mask_col:
+            if st.button("仅保存 mask"):
+                try:
+                    output_dir.mkdir(parents=True, exist_ok=True)
+                    saved_masks = []
+                    for index, mask_image in enumerate(mask_images, start=1):
+                        suffix = "_mask.png" if len(mask_images) == 1 else f"_mask_{index:02d}.png"
+                        mask_path = output_dir / f"{safe_stem}{suffix}"
+                        mask_image.save(mask_path, format="PNG")
+                        saved_masks.append(mask_path.name)
+                    st.success(f"Mask 已保存到 {output_dir.resolve()}：" + "、".join(saved_masks))
+                except Exception as exc:
+                    st.error(f"Mask 保存失败：{exc}")
 
