@@ -1,7 +1,9 @@
 """Streamlit UI for text, point, and box image prompts."""
 import io
 import hashlib
+import re
 import zipfile
+from pathlib import Path
 
 import numpy as np
 import streamlit as st
@@ -25,6 +27,7 @@ if not hasattr(streamlit_image, "image_to_url"):
 from streamlit_drawable_canvas import st_canvas
 
 from .engine import Sam3Engine
+from .config import PROJECT_ROOT
 from .visualization import overlay
 
 
@@ -168,8 +171,9 @@ def main() -> None:
         return
     st.success(f"完成：分割出 {len(result.masks)} 个目标/掩码。")
     left, right = st.columns(2)
+    overlay_image = overlay(image, result.masks, result.boxes, result.scores)
     with left:
-        st.image(overlay(image, result.masks, result.boxes, result.scores), caption="分割结果（原图叠加 mask）", use_container_width=True)
+        st.image(overlay_image, caption="分割结果（原图叠加 mask）", use_container_width=True)
     with right:
         st.image(image, caption="原图", use_container_width=True)
 
@@ -177,9 +181,12 @@ def main() -> None:
         mask_output = st.radio("Mask 显示/保存方式", ["分别查看/保存", "组合为二值并集 mask", "组合为目标编号 mask"],
                                horizontal=True, key=f"mask-output-{image_id}")
         mask_bytes = []
+        mask_images = []
         for mask in result.masks:
             buffer = io.BytesIO()
-            Image.fromarray(mask.astype("uint8") * 255, mode="L").save(buffer, format="PNG")
+            mask_image = Image.fromarray(mask.astype("uint8") * 255, mode="L")
+            mask_images.append(mask_image)
+            mask_image.save(buffer, format="PNG")
             mask_bytes.append(buffer.getvalue())
         if mask_output == "分别查看/保存":
             selected = st.selectbox("查看单个目标的 mask", range(len(result.masks)),
@@ -199,6 +206,7 @@ def main() -> None:
         elif mask_output == "组合为二值并集 mask":
             union_mask = np.logical_or.reduce(result.masks)
             union_image = Image.fromarray(union_mask.astype("uint8") * 255, mode="L")
+            mask_images = [union_image]
             union_buffer = io.BytesIO()
             union_image.save(union_buffer, format="PNG")
             st.image(union_image, caption="合并后的二值 mask（所有目标并集）", use_container_width=True)
@@ -209,6 +217,7 @@ def main() -> None:
             for index, mask in enumerate(result.masks, start=1):
                 labels[np.asarray(mask, dtype=bool) & (labels == 0)] = index
             label_image = Image.fromarray(labels, mode="I;16")
+            mask_images = [label_image]
             label_buffer = io.BytesIO()
             label_image.save(label_buffer, format="PNG")
             palette = np.zeros((*labels.shape, 3), dtype=np.uint8)
@@ -218,4 +227,23 @@ def main() -> None:
             st.caption("下载的灰度 PNG 中，0 表示背景，1、2、3… 对应目标编号；重叠像素归入编号较小的目标。")
             st.download_button("保存目标编号 mask（PNG）", data=label_buffer.getvalue(),
                                file_name="sam3_mask_labels.png", mime="image/png")
+
+        st.caption("本地保存会将叠加结果和当前 mask 输出方式对应的 mask 图写入项目目录下的 masked 文件夹。")
+        if st.button("保存叠加图和 mask 到 masked 文件夹", type="primary"):
+            try:
+                original_stem = Path(uploaded.name).stem
+                safe_stem = re.sub(r"[^A-Za-z0-9._-]+", "_", original_stem).strip("._") or "image"
+                output_dir = PROJECT_ROOT / "masked"
+                output_dir.mkdir(parents=True, exist_ok=True)
+                overlay_path = output_dir / f"{safe_stem}_masked.png"
+                overlay_image.save(overlay_path, format="PNG")
+                saved_masks = []
+                for index, mask_image in enumerate(mask_images, start=1):
+                    suffix = "_mask.png" if len(mask_images) == 1 else f"_mask_{index:02d}.png"
+                    mask_path = output_dir / f"{safe_stem}{suffix}"
+                    mask_image.save(mask_path, format="PNG")
+                    saved_masks.append(mask_path.name)
+                st.success(f"已保存到 {output_dir.resolve()}：{overlay_path.name}，" + "、".join(saved_masks))
+            except Exception as exc:
+                st.error(f"保存失败：{exc}")
 
