@@ -59,3 +59,10 @@ sam3_masks.zip
 /sam3/test/
 /sam3/scripts/
 /sam3/sam3.egg-info/
+/sam3/assets/videos/
+/sam3/assets/images/
+/sam3/assets/veval/
+/sam3/assets/*.gif
+/sam3/assets/*.jpg
+/sam3/assets/*.png
+/sam3/sam3/perflib/tests/

@@ -167,3 +167,7 @@ python -m streamlit run app.py
 - **内存/显存不足**：关闭占用资源的程序、减少同时运行的 GPU 应用，或使用更小图像；Windows 页面文件也应留有足够空间。
 - **Streamlit 组件依赖冲突**：使用项目列出的 `streamlit-drawable-canvas==0.9.3`，不要升级到未验证的画布版本。
 - **导入 SAM 3 失败**：确认 `sam3/` 目录包含上游源码，并在同一虚拟环境执行 `python -m pip install --no-deps -e .\sam3`。
+<<<<<<< HEAD
+=======
+
+>>>>>>> 4e1216d4e5d36ee1ff35661b227d9fc4b92e09b0
