@@ -50,6 +50,8 @@ runs/
 *.mask.png
 sam3_mask*.png
 sam3_masks.zip
+/python_embeded/
+/python_embeded.zip
 
 # Bootstrap utility is not application source.
 /get-pip.py
@@ -66,3 +68,4 @@ sam3_masks.zip
 /sam3/assets/*.jpg
 /sam3/assets/*.png
 /sam3/sam3/perflib/tests/
+
