@@ -29,7 +29,7 @@ SAM 3 上游的基础要求是 PyTorch 2.7+ 和 CUDA 12.6+（详见 [Meta SAM 3 
 本仓库提交应用源码、依赖清单、文档和运行所需的 SAM 3 Python 源码。以下内容不会提交：
 
 - `masked/` 目录及其所有子目录、文件（无论层级）。
-- `python_embeded/`、虚拟环境、缓存和编辑器配置。
+- `python_embeded/`、`python_embeded.zip`、虚拟环境、缓存和编辑器配置。嵌入式 Python 运行环境体积较大，请按下方说明自行创建环境。
 - `.pt`、`.pth`、`.ckpt`、`.safetensors` 等模型权重，以及 ONNX/TensorRT 模型文件。
 - 上传缓存、推理结果和生成的 mask 文件。
 - SAM 3 仓库中的示例、测试和开发脚本。
@@ -93,7 +93,7 @@ $env:SAM3_DEVICE = "cpu"
 python -m streamlit run app.py
 ```
 
-CPU 推理速度会明显慢于 GPU，且需要较多系统内存。CUDA 环境下默认使用 `cuda`，若 CUDA 不可用，应用会回退到 CPU；需要强制 CPU 时设置 `SAM3_DEVICE=cpu`。
+CPU 推理速度会明显慢于 GPU，且需要较多系统内存。CUDA 环境下默认使用 `cuda`；如果 CUDA 不可用，应用会报告当前 PyTorch/CUDA 状态并停止，避免误走 CPU 后只显示内存不足。需要使用 CPU 时显式设置 `SAM3_DEVICE=cpu`。
 
 ## 依赖项
 
@@ -167,7 +167,4 @@ python -m streamlit run app.py
 - **内存/显存不足**：关闭占用资源的程序、减少同时运行的 GPU 应用，或使用更小图像；Windows 页面文件也应留有足够空间。
 - **Streamlit 组件依赖冲突**：使用项目列出的 `streamlit-drawable-canvas==0.9.3`，不要升级到未验证的画布版本。
 - **导入 SAM 3 失败**：确认 `sam3/` 目录包含上游源码，并在同一虚拟环境执行 `python -m pip install --no-deps -e .\sam3`。
-<<<<<<< HEAD
-=======
 
->>>>>>> 4e1216d4e5d36ee1ff35661b227d9fc4b92e09b0
