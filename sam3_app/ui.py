@@ -41,6 +41,27 @@ def _point_color(rgb: tuple[int, int, int], alpha: float = 0.55) -> str:
     return f"rgba({rgb[0]},{rgb[1]},{rgb[2]},{alpha})"
 
 
+def _save_mask_with_original_name(mask_image: Image.Image, path: Path) -> None:
+    """Save a mask using the source filename's exact extension and spelling."""
+    image_format = {
+        ".png": "PNG",
+        ".jpg": "JPEG",
+        ".jpeg": "JPEG",
+        ".webp": "WEBP",
+    }.get(path.suffix.lower())
+    if image_format is None:
+        raise ValueError(f"不支持将 mask 保存为此文件扩展名：{path.suffix}")
+    image = mask_image
+    if image_format in {"JPEG", "WEBP"} and image.mode not in {"L", "RGB"}:
+        image = image.convert("L")
+    if image_format == "JPEG":
+        image.save(path, format=image_format, quality=100, subsampling=0)
+    elif image_format == "WEBP":
+        image.save(path, format=image_format, lossless=True)
+    else:
+        image.save(path, format=image_format)
+
+
 @st.cache_resource
 def get_engine() -> Sam3Engine:
     return Sam3Engine()
@@ -59,7 +80,7 @@ def main() -> None:
     if st.session_state.get("segmentation_image_id") != image_id:
         st.session_state.pop("segmentation_result", None)
         st.session_state["segmentation_image_id"] = image_id
-    mode = st.radio("提示方式", ["文字提示", "交互式点提示", "交互式框提示"], horizontal=True)
+    mode = st.radio("提示方式", ["文字提示", "交互式点提示", "交互式框提示"], index=2, horizontal=True)
     max_width = min(900, image.width)
     scale = max_width / image.width
     display = image.resize((max_width, max(1, round(image.height * scale))))
@@ -179,9 +200,10 @@ def main() -> None:
 
     if result.masks:
         mask_output = st.radio("Mask 显示/保存方式", ["分别查看/保存", "组合为二值并集 mask", "组合为目标编号 mask"],
-                               horizontal=True, key=f"mask-output-{image_id}")
+                               index=1, horizontal=True, key=f"mask-output-{image_id}")
         mask_bytes = []
         mask_images = []
+        mask_image_to_save = None
         for mask in result.masks:
             buffer = io.BytesIO()
             mask_image = Image.fromarray(mask.astype("uint8") * 255, mode="L")
@@ -194,6 +216,7 @@ def main() -> None:
             mask_col, download_col = st.columns([2, 1])
             with mask_col:
                 st.image(mask_bytes[selected], caption=f"目标 {selected + 1} 的二值 mask（白色为前景）", use_container_width=True)
+            mask_image_to_save = mask_images[selected]
             with download_col:
                 st.download_button("保存此目标 mask（PNG）", data=mask_bytes[selected],
                                    file_name=f"sam3_mask_{selected + 1:02d}.png", mime="image/png")
@@ -207,6 +230,7 @@ def main() -> None:
             union_mask = np.logical_or.reduce(result.masks)
             union_image = Image.fromarray(union_mask.astype("uint8") * 255, mode="L")
             mask_images = [union_image]
+            mask_image_to_save = union_image
             union_buffer = io.BytesIO()
             union_image.save(union_buffer, format="PNG")
             st.image(union_image, caption="合并后的二值 mask（所有目标并集）", use_container_width=True)
@@ -218,6 +242,7 @@ def main() -> None:
                 labels[np.asarray(mask, dtype=bool) & (labels == 0)] = index
             label_image = Image.fromarray(labels, mode="I;16")
             mask_images = [label_image]
+            mask_image_to_save = label_image
             label_buffer = io.BytesIO()
             label_image.save(label_buffer, format="PNG")
             palette = np.zeros((*labels.shape, 3), dtype=np.uint8)
@@ -246,13 +271,14 @@ def main() -> None:
             if st.button("仅保存 mask"):
                 try:
                     output_dir.mkdir(parents=True, exist_ok=True)
-                    saved_masks = []
-                    for index, mask_image in enumerate(mask_images, start=1):
-                        suffix = "_mask.png" if len(mask_images) == 1 else f"_mask_{index:02d}.png"
-                        mask_path = output_dir / f"{safe_stem}{suffix}"
-                        mask_image.save(mask_path, format="PNG")
-                        saved_masks.append(mask_path.name)
-                    st.success(f"Mask 已保存到 {output_dir.resolve()}：" + "、".join(saved_masks))
+                    mask_path = output_dir / uploaded.name
+                    if mask_path.name != uploaded.name or mask_path.resolve().parent != output_dir.resolve():
+                        raise ValueError("原图文件名包含路径部分，无法安全地按原名保存。")
+                    if mask_image_to_save is None:
+                        raise ValueError("当前没有可保存的 mask。")
+                    _save_mask_with_original_name(mask_image_to_save, mask_path)
+                    st.success(f"Mask 已按原图文件名保存：{mask_path.resolve()}")
                 except Exception as exc:
                     st.error(f"Mask 保存失败：{exc}")
+
 
