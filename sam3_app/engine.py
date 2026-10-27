@@ -38,7 +38,13 @@ class Sam3Engine:
             raise RuntimeError(f"找不到 SAM3 权重文件：{settings.checkpoint}")
         import psutil
         import torch
-        device = self.device if self.device == "cpu" or torch.cuda.is_available() else "cpu"
+        if self.device != "cpu" and not torch.cuda.is_available():
+            raise RuntimeError(
+                "当前配置要求使用 CUDA，但嵌入式 Python 中的 PyTorch 未检测到可用 CUDA。"
+                f"当前 PyTorch：{torch.__version__}，CUDA 构建：{torch.version.cuda or '无'}。"
+                "请在 python_embeded 环境安装 CUDA 版 PyTorch；若确实要使用 CPU，请设置 SAM3_DEVICE=cpu。"
+            )
+        device = self.device
         available_memory = psutil.virtual_memory().available
         if device.startswith("cuda"):
             # The checkpoint is memory-mapped and loaded directly onto CUDA.
@@ -178,4 +184,5 @@ class Sam3Engine:
                 boxes.append([int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1]
                              if len(xs) else [0, 0, 0, 0])
         return Segmentation(masks_out, boxes, scores_out)
+
 
